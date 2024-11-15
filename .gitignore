@@ -1,0 +1,10 @@
+/documentation/
+# Ignore IDE-specific files
+.idea/
+.vscode/
+
+# Ignore generated files
+*.ir
+*.metadata
+.scannerwork/
+target/
