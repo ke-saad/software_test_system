@@ -23,6 +23,7 @@ public class CodeAnalysisService {
     private final ObjectMapper objectMapper;
 
     private final String geminiApiKey = "AIzaSyB5Qyxnj30gp5SCstCOkkzo7MoAzI2h3-I";
+    private final String geminiApiKey1 = "AIzaSyCyM3spn20mTVhFwR6veMrz235oeh_rsrc";
     private final String geminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-exp-1114:generateContent";
 
     // Retry settings
@@ -71,13 +72,22 @@ public class CodeAnalysisService {
                 );
 
                 if (response.getStatusCode() == HttpStatus.OK) {
+                    log.info("API Response (Attempt {}): {}", (attempt + 1), response.getBody());
                     return parseResponse(response.getBody());
+                } else if (response.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
+                    log.error("Attempt {}: Rate limited (HTTP 429). Retrying with secondary API key...", (attempt + 1));
+                    headers.set("x-goog-api-key", geminiApiKey1);
                 } else {
-                    log.error("Error: Status code " + response.getStatusCode());
-                    return null;
+                    log.error("Attempt {}: Error - Status code {}", (attempt + 1), response.getStatusCode());
+                    return "Error: Received non-OK response.";
                 }
             } catch (HttpClientErrorException e) {
-                log.error("Attempt " + (attempt + 1) + ": API request failed - " + e.getMessage());
+                if (e.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
+                    log.error("Attempt {}: Rate limited (HTTP 429). Retrying with secondary API key...", (attempt + 1));
+                    headers.set("x-goog-api-key", geminiApiKey1);
+                } else {
+                    log.error("Attempt {}: API request failed - {}", (attempt + 1), e.getMessage());
+                }
             }
 
             try {
@@ -87,7 +97,7 @@ public class CodeAnalysisService {
             }
         }
 
-        return null; // All attempts failed
+        return "Error: All attempts to connect to the API failed.";
     }
 
     private String escapeJson(String input) {
@@ -100,28 +110,53 @@ public class CodeAnalysisService {
 
     private String parseResponse(String responseBody) {
         try {
+            log.info("Parsing the response: {}", responseBody);
 
             Map<String, Object> responseMap = objectMapper.readValue(responseBody, Map.class);
+
+            if (responseMap == null || !responseMap.containsKey("candidates")) {
+                log.error("Invalid response format: missing 'candidates'.");
+                return "Error: Invalid response format.";
+            }
+
             List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseMap.get("candidates");
-            if (candidates == null || candidates.isEmpty()) {
-                log.error("No candidates found in the response");
-                return "No meaningful analysis was retrieved.";
+            if (candidates.isEmpty()) {
+                log.error("No candidates found in the response.");
+                return "Error: No meaningful analysis was retrieved.";
             }
 
             Map<String, Object> candidate = candidates.get(0);
-            Map<String, Object> content = (Map<String, Object>) candidate.get("content");
-            List<Map<String, String>> parts = (List<Map<String, String>>) content.get("parts");
-            String rawText = parts.get(0).get("text");
+            if (!candidate.containsKey("content")) {
+                log.error("Missing 'content' field in candidate.");
+                return "Error: Invalid candidate format.";
+            }
 
+            Map<String, Object> content = (Map<String, Object>) candidate.get("content");
+            if (!content.containsKey("parts")) {
+                log.error("Missing 'parts' field in content.");
+                return "Error: Invalid content format.";
+            }
+
+            List<Map<String, String>> parts = (List<Map<String, String>>) content.get("parts");
+            if (parts.isEmpty() || !parts.get(0).containsKey("text")) {
+                log.error("Missing 'text' field in parts.");
+                return "Error: Invalid parts format.";
+            }
+
+            String rawText = parts.get(0).get("text");
             String jsonText = rawText.replace("```json", "").replace("```", "").trim();
 
-            Map<String, Object> analysisData = objectMapper.readValue(jsonText, Map.class);
+            if (jsonText.isEmpty()) {
+                log.error("Empty JSON content in the response.");
+                return "Error: Empty analysis content.";
+            }
 
+            Map<String, Object> analysisData = objectMapper.readValue(jsonText, Map.class);
             return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(analysisData);
 
         } catch (IOException e) {
             log.error("Failed to parse Gemini API response: " + e.getMessage(), e);
-            throw new RuntimeException("Failed to parse Gemini API response", e);
+            return "Error: Failed to parse response.";
         }
     }
 }

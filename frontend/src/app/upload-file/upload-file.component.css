@@ -1,0 +1,80 @@
+.container {
+    text-align: center;
+    margin-top: 50px;
+  }
+  
+  .upload-card {
+    padding: 20px;
+    margin: 0 auto;
+    max-width: 600px;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+  }
+  
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  
+  .header mat-icon {
+    font-size: 36px;
+  }
+  
+  .upload-section {
+    margin-top: 20px;
+    text-align: center;
+  }
+  
+  .drop-zone {
+    padding: 20px;
+    border: 2px dashed #0078d4;
+    border-radius: 8px;
+    color: #0078d4;
+    background-color: #f7f9fc;
+    margin-bottom: 10px;
+    cursor: pointer;
+    position: relative;
+  }
+  
+  .drop-zone:hover {
+    background-color: #eaf3fc;
+  }
+  
+  .hidden-input {
+    display: none;
+  }
+  
+  .file-info {
+    font-size: 14px;
+    color: #666;
+    margin-top: 10px;
+  }
+  
+  .upload-btn {
+    margin-top: 15px;
+  }
+  
+  .code-display {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f9f9f9;
+    font-family: monospace;
+    text-align: left;
+    overflow: auto;
+  }
+  
+  .code-display pre {
+    margin: 0;
+  }
+  
+  .analysis-section {
+    margin: 20px auto;
+    max-width: 600px;
+    text-align: center;
+  }
+  

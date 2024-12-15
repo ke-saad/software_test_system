@@ -1,0 +1,51 @@
+<div class="container">
+    <mat-card class="upload-card">
+      <div class="header">
+        <mat-icon color="primary" fontIcon="code"></mat-icon>
+        <h2>Upload Your Code File</h2>
+      </div>
+      <div class="upload-section">
+        <div
+          class="drop-zone"
+          (drop)="onDrop($event)"
+          (dragover)="onDragOver($event)"
+        >
+          Drag & Drop your file here or
+          <input
+            type="file"
+            (change)="onFileSelected($event)"
+            accept=".java,.py,.js,.ts,.cpp"
+            class="hidden-input"
+          />
+          <button mat-raised-button color="primary" (click)="triggerFileInput()">
+            Browse File
+          </button>
+        </div>
+        <p *ngIf="selectedFile" class="file-info">
+          Selected File: {{ selectedFile.name }}
+        </p>
+        <button
+          mat-raised-button
+          color="accent"
+          [disabled]="!selectedFile"
+          (click)="onUpload()"
+          class="upload-btn"
+        >
+          Upload & Analyze
+        </button>
+      </div>
+    </mat-card>
+  
+    <!-- Code Display Section -->
+    <div *ngIf="fileContent" class="code-display">
+      <h3>Uploaded Code</h3>
+      <pre><code [innerText]="fileContent"></code></pre>
+    </div>
+  
+    <!-- Analysis Progress Section -->
+    <div *ngIf="isAnalyzing" class="analysis-section">
+      <mat-progress-bar mode="indeterminate" color="accent"></mat-progress-bar>
+      <p>{{ analysisMessage }}</p>
+    </div>
+  </div>
+  

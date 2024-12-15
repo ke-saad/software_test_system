@@ -20,6 +20,7 @@ public class TestGenerationListener {
     @RabbitListener(queues = "analysisQueue")
     public void receiveAnalysisData(String messageBody) {  
         try {
+        	log.info("starting test generation");
 
             // Parse the messageBody to extract the filename, code, and analysis details
             String filename = extractFilename(messageBody);
