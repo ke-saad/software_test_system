@@ -1,9 +1,12 @@
 package com.CodeAnalysis.service;
 
+
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.amqp.core.Queue;
 
 @SpringBootApplication
 public class CodeAnalysisServiceApplication {
@@ -14,6 +17,16 @@ public class CodeAnalysisServiceApplication {
     @Bean
     public RestTemplate restTemplate() {
         return new RestTemplate();
+    }
+    // Define the queue for communication between the microservices
+    @Bean
+    public Queue analysisQueue() {
+        return new Queue("analysisQueue", false);  // 'false' means it is not durable
+    }
+
+    @Bean
+    public RabbitTemplate rabbitTemplate(org.springframework.amqp.rabbit.connection.ConnectionFactory connectionFactory) {
+        return new RabbitTemplate(connectionFactory);
     }
 
 }
