@@ -2,7 +2,7 @@
 # Ignore IDE-specific files
 .idea/
 .vscode/
-
+code_analyse/
 # Ignore generated files
 *.ir
 *.metadata
