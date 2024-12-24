@@ -13,7 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class ApiGatewayController {
 
     @Value("${code-analysis-service.url}")
-    private String codeAnalysisServiceUrl;  // Inject the URL of the Code Analysis service
+    private String codeAnalysisServiceUrl;
 
     private final RestTemplate restTemplate;
 
@@ -23,24 +23,24 @@ public class ApiGatewayController {
 
     @PostMapping("/CodeAnalysisService")
     public ResponseEntity<String> analyzeFile(@RequestParam("file") MultipartFile file) {
-        // Prepare the headers
+
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
-        // Create a MultiValueMap to hold the file and other parameters
+
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        body.add("file", file.getResource());  // Add the MultipartFile to the body
-        
-        // Wrap the body and headers in an HttpEntity
+        body.add("file", file.getResource());
+
+
         HttpEntity<MultiValueMap<String, Object>> entity = new HttpEntity<>(body, headers);
 
-        // Define the URL of the target microservice (Code Analysis service)
+
         String url = codeAnalysisServiceUrl + "/api/v1/analysis/analyzeFile";
 
-        // Make the POST request to the microservice
+
         ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, entity, String.class);
 
-        // Return the response from the Code Analysis service
+
         return response;
     }
 }

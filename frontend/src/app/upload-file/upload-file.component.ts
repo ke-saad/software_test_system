@@ -1,10 +1,10 @@
-import { Component } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { CommonModule } from '@angular/common'; // Import CommonModule
-import { MatIconModule } from '@angular/material/icon'; // Import MatIconModule
+import {Component} from '@angular/core';
+import {HttpClient} from '@angular/common/http';
+import {MatCardModule} from '@angular/material/card';
+import {MatButtonModule} from '@angular/material/button';
+import {MatProgressBarModule} from '@angular/material/progress-bar';
+import {CommonModule} from '@angular/common';
+import {MatIconModule} from '@angular/material/icon';
 
 @Component({
   selector: 'app-upload-file',
@@ -19,7 +19,8 @@ export class UploadFileComponent {
   isAnalyzing = false;
   analysisMessage = 'Analyzing your code...';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+  }
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
@@ -62,10 +63,11 @@ export class UploadFileComponent {
       console.error('No file selected.');
     }
   }
+
   onDragOver(event: DragEvent): void {
     event.preventDefault();
   }
-  
+
   onDrop(event: DragEvent): void {
     event.preventDefault();
     if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
@@ -73,12 +75,12 @@ export class UploadFileComponent {
       this.readFileContent(this.selectedFile);
     }
   }
-  
+
   triggerFileInput(): void {
     const input = document.querySelector('input[type="file"]') as HTMLElement;
     input.click();
-  }  
-  
+  }
+
   simulateAnalysis(): void {
     const messages = [
       'Analyzing your code...',

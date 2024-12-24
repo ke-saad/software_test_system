@@ -2,7 +2,6 @@ package com.CodeAnalysis.service.model;
 import jakarta.persistence.*;
 import lombok.*;
 @AllArgsConstructor
-@NoArgsConstructor
 @Entity
 @Data
 public class AnalysisResult {

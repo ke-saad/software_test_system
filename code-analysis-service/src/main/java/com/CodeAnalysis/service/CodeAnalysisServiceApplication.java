@@ -18,10 +18,10 @@ public class CodeAnalysisServiceApplication {
     public RestTemplate restTemplate() {
         return new RestTemplate();
     }
-    // Define the queue for communication between the microservices
+
     @Bean
     public Queue analysisQueue() {
-        return new Queue("analysisQueue", false);  // 'false' means it is not durable
+        return new Queue("analysisQueue", false);
     }
 
     @Bean

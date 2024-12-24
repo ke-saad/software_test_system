@@ -1,13 +1,13 @@
 package com.TestExecution.service.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
 
 @Service
 public class PomGenerator {
@@ -16,13 +16,13 @@ public class PomGenerator {
 
     public void generatePom(String projectRootPath) {
         try {
-            // Extract the groupId from the directory structure
+
             String groupId = extractGroupId(projectRootPath);
 
-            // Artifact ID is based on the name of the project directory
+
             String artifactId = Path.of(projectRootPath).getFileName().toString();
 
-            // Generate pom.xml with comprehensive dependencies
+
             writePomFile(projectRootPath, groupId, artifactId);
 
         } catch (Exception e) {
@@ -32,7 +32,7 @@ public class PomGenerator {
     }
 
     private void writePomFile(String projectRootPath, String groupId, String artifactId) {
-        // Comprehensive POM content
+
         String pomContent = "<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n"
                 + "         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
                 + "         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\">\n"

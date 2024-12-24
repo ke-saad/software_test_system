@@ -1,13 +1,12 @@
 package com.CodeAnalysis.service.service;
 
+import com.CodeAnalysis.service.controller.CodeAnalysisController;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
-
-import com.CodeAnalysis.service.controller.CodeAnalysisController;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.util.List;
@@ -18,17 +17,13 @@ import java.util.concurrent.TimeUnit;
 public class CodeAnalysisService {
 
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(CodeAnalysisController.class);
-
+    private static final int MAX_RETRIES = 5;
+    private static final int RETRY_DELAY = 5;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-
     private final String geminiApiKey = "AIzaSyB5Qyxnj30gp5SCstCOkkzo7MoAzI2h3-I";
     private final String geminiApiKey1 = "AIzaSyCyM3spn20mTVhFwR6veMrz235oeh_rsrc";
     private final String geminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-exp-1114:generateContent";
-
-    // Retry settings
-    private static final int MAX_RETRIES = 5;
-    private static final int RETRY_DELAY = 5; // seconds
 
     public CodeAnalysisService(RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
@@ -63,6 +58,9 @@ public class CodeAnalysisService {
         HttpEntity<String> entity = new HttpEntity<>(requestBody, headers);
 
         for (int attempt = 0; attempt < MAX_RETRIES; attempt++) {
+            log.info("Attempt {} - Gemini API Key being used: {}", (attempt + 1), headers.get("x-goog-api-key"));
+            log.debug("Attempt {} - Gemini API request body:\n{}", (attempt + 1), requestBody);
+
             try {
                 ResponseEntity<String> response = restTemplate.exchange(
                         geminiApiUrl,
@@ -73,10 +71,12 @@ public class CodeAnalysisService {
 
                 if (response.getStatusCode() == HttpStatus.OK) {
                     log.info("API Response (Attempt {}): {}", (attempt + 1), response.getBody());
+                    log.debug("Attempt {} - Gemini API response headers: {}", (attempt + 1), response.getHeaders());
                     return parseResponse(response.getBody());
                 } else if (response.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
                     log.error("Attempt {}: Rate limited (HTTP 429). Retrying with secondary API key...", (attempt + 1));
                     headers.set("x-goog-api-key", geminiApiKey1);
+                    log.info("Attempt {} - Changing Gemini API Key to: {}", (attempt + 1), headers.get("x-goog-api-key"));
                 } else {
                     log.error("Attempt {}: Error - Status code {}", (attempt + 1), response.getStatusCode());
                     return "Error: Received non-OK response.";
@@ -85,8 +85,10 @@ public class CodeAnalysisService {
                 if (e.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
                     log.error("Attempt {}: Rate limited (HTTP 429). Retrying with secondary API key...", (attempt + 1));
                     headers.set("x-goog-api-key", geminiApiKey1);
+                    log.info("Attempt {} - Changing Gemini API Key to: {}", (attempt + 1), headers.get("x-goog-api-key"));
                 } else {
                     log.error("Attempt {}: API request failed - {}", (attempt + 1), e.getMessage());
+                    log.error("Attempt {} - Exception message:\n{}", (attempt + 1), e.getMessage());
                 }
             }
 
@@ -101,11 +103,11 @@ public class CodeAnalysisService {
     }
 
     private String escapeJson(String input) {
-        return input.replace("\\", "\\\\")   // Escape backslashes first
-                    .replace("\"", "\\\"")   // Escape double quotes
-                    .replace("\n", "\\n")    // Newline
-                    .replace("\r", "\\r")    // Carriage return
-                    .replace("\t", "\\t");   // Tab
+        return input.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 
     private String parseResponse(String responseBody) {

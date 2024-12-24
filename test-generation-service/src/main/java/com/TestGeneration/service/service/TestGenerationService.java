@@ -23,19 +23,15 @@ import java.util.concurrent.TimeUnit;
 public class TestGenerationService {
 
     private static final Logger log = LoggerFactory.getLogger(TestGenerationService.class);
-
+    private static final int MAX_RETRIES = 5;
+    private static final int RETRY_DELAY = 5;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
-
-    @Autowired
-    private RabbitTemplate rabbitTemplate;
-
     private final String geminiApiKey = "AIzaSyB5Qyxnj30gp5SCstCOkkzo7MoAzI2h3-I";
     private final String geminiApiKey1 = "AIzaSyCyM3spn20mTVhFwR6veMrz235oeh_rsrc";
     private final String geminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-exp-1114:generateContent";
-
-    private static final int MAX_RETRIES = 5;
-    private static final int RETRY_DELAY = 5; // seconds
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
 
     public TestGenerationService(RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
@@ -88,7 +84,7 @@ public class TestGenerationService {
                             .andProperties(messageProperties)
                             .build();
                     rabbitTemplate.send("TestsQueue", message);
-                    log.info("Message sent successfully to TestsQueue."+(String)messageBody);
+                    log.info("Message sent successfully to TestsQueue." + (String) messageBody);
                     return "Tests generated successfully and sent to the test execution microservice.";
                 } else if (response.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
                     log.error("Attempt {}: Rate limited (HTTP 429). Retrying with secondary API key...", (attempt + 1));
@@ -115,7 +111,7 @@ public class TestGenerationService {
             }
         }
 
-        return null; // All attempts failed
+        return null;
     }
 
     private String createTestGenerationPrompt(String analysisDetails) {

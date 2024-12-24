@@ -1,15 +1,13 @@
 package com.TestExecution.service.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 
 @Service
 public class TestExecutionService {
@@ -18,16 +16,18 @@ public class TestExecutionService {
     @Autowired
     PomGenerator pomGenerator;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     public String executeTests(File directory, String language, String analysisDetails) {
         logger.info("Starting test execution for language: {}", language);
-
         if ("Java".equalsIgnoreCase(language)) {
-            generatePomFile(directory, analysisDetails); // Generate the POM file
-            return executeJavaTests(directory); // Execute Java tests
+            generatePomFile(directory, analysisDetails);
+            return executeJavaTests(directory, analysisDetails);
         } else {
-            String errorMessage = "Test execution for " + language + " is not supported yet.";
+            String errorMessage = "Test execution for " + language + " is not supported yet. proceeding with no execution";
             logger.error(errorMessage);
-            throw new UnsupportedOperationException(errorMessage);
+            return errorMessage;
         }
     }
 
@@ -35,9 +35,7 @@ public class TestExecutionService {
         try {
             String projectPath = directory.getAbsolutePath();
             logger.info("Generating POM file for project at: {}", projectPath);
-
-			pomGenerator.generatePom(projectPath); // Assuming you have this utility
-
+            pomGenerator.generatePom(projectPath);
             logger.info("POM file successfully generated.");
         } catch (Exception e) {
             logger.error("Error generating POM file: {}", e.getMessage(), e);
@@ -45,13 +43,13 @@ public class TestExecutionService {
         }
     }
 
-    private String executeJavaTests(File directory) {
+    private String executeJavaTests(File directory, String analysisDetails) {
         String projectPath = directory.getAbsolutePath();
         logger.info("Running tests for Java project at: {}", projectPath);
-        return runMavenTests(projectPath); // Execute Maven tests
+        return runMavenTests(projectPath, analysisDetails);
     }
 
-    private String runMavenTests(String projectPath) {
+    private String runMavenTests(String projectPath, String analysisDetails) {
         String command = "cmd /c mvn -f " + projectPath + "\\pom.xml test -e -X";
 
         try {
@@ -71,14 +69,21 @@ public class TestExecutionService {
 
             int exitCode = process.waitFor();
 
+
+            ObjectNode messageJson = objectMapper.createObjectNode();
+            messageJson.put("analysisDetails", analysisDetails);
             if (exitCode == 0) {
-                logger.info("Test execution completed successfully:\n{}", output);
-                return "Test execution completed successfully:\n" + output;
+                messageJson.put("testOutput", "Test execution completed successfully:\n" + output.toString());
             } else {
-                logger.error("Test execution failed:\n{}", error);
-                logger.error("Additional output:\n{}", output);
-                return "Test execution failed with errors:\n" + error;
+                messageJson.put("testOutput", "Test execution failed with errors:\n" + error.toString() + "\n" + "Additional output:\n" + output.toString());
             }
+
+
+            String message = objectMapper.writeValueAsString(messageJson);
+
+            logger.info("Message about to be sent to recommendation service:\n{}", message);
+            return message;
+
         } catch (IOException | InterruptedException e) {
             logger.error("Error during Maven test execution: {}", e.getMessage(), e);
             return "Error during Maven test execution: " + e.getMessage();
@@ -90,7 +95,7 @@ public class TestExecutionService {
             String line;
             while ((line = reader.readLine()) != null) {
                 builder.append(line).append("\n");
-                logger.debug("[{}] {}", streamName, line); // Log each line
+                logger.debug("[{}] {}", streamName, line);
             }
         } catch (IOException e) {
             logger.error("Error capturing {} stream: {}", streamName, e.getMessage(), e);

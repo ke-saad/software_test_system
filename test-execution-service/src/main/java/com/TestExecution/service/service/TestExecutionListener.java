@@ -1,8 +1,14 @@
 package com.TestExecution.service.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageBuilder;
+import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,10 +25,16 @@ public class TestExecutionListener {
     @Autowired
     private TestExecutionService testExecutionService;
 
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @RabbitListener(queues = "TestsQueue")
     public void receiveAnalysisData(String messageBody) {
         try {
-            // Extract relevant data
+
             String filename = extractFilename(messageBody);
             String code = extractCode(messageBody);
             String analysisDetails = extractAnalysisDetails(messageBody);
@@ -35,11 +47,42 @@ public class TestExecutionListener {
             log.info("Received Language: {}", language);
             log.info("Received Analysis:\n{}", analysisDetails);
 
-            // Save files to a temporary directory
+
             File tempDir = saveFilesToTempDir(filename, code, tests);
 
-            // Pass the directory and language to the service
-            testExecutionService.executeTests(tempDir, language, analysisDetails);
+
+            String testResultsJson = testExecutionService.executeTests(tempDir, language, analysisDetails);
+
+
+            if (testResultsJson != null && !testResultsJson.isEmpty()) {
+                try {
+
+                    ObjectNode messageJson = (ObjectNode) objectMapper.readTree(testResultsJson);
+
+
+                    messageJson.put("filename", filename);
+                    messageJson.put("code", code);
+
+
+                    String messageToSend = objectMapper.writeValueAsString(messageJson);
+
+
+                    MessageProperties messageProperties = new MessageProperties();
+                    messageProperties.setContentType("application/json");
+                    messageProperties.setContentEncoding("UTF-8");
+                    Message message = MessageBuilder.withBody(messageToSend.getBytes("UTF-8"))
+                            .andProperties(messageProperties)
+                            .build();
+
+
+                    rabbitTemplate.send("recommendation-exchange", "test.execution.message", message);
+                    log.info("Test execution results sent to recommendation-exchange with routing key 'test.execution.message': {}", messageToSend);
+                } catch (Exception e) {
+                    log.error("Error sending test results to recommendation service: ", e);
+                }
+            } else {
+                log.error("Test results are null or empty. Message not sent to recommendation service.");
+            }
 
         } catch (Exception e) {
             log.error("Error while processing analysis data: ", e);
@@ -58,15 +101,29 @@ public class TestExecutionListener {
     }
 
     public String extractTests(String analysisOutput) {
-        if (analysisOutput == null || analysisOutput.isEmpty()) {
+        if (analysisOutput == null || analysisOutput.isEmpty() || !analysisOutput.contains("Tests:")) {
             return "";
         }
 
         try {
             String testsSection = analysisOutput.split("Tests:")[1];
-            String testsContent = testsSection.split("\\{tests=\\[")[1].split("]}")[0];
-            String testCode = testsContent.split("```java")[1].split("```")[0].trim();
-            return testCode;
+
+            int start = testsSection.indexOf("{tests=[");
+            if (start == -1) return "";
+            start += "{tests=[".length();
+
+
+            int end = testsSection.lastIndexOf("]}}");
+            if (end == -1) return "";
+
+            String testsContent = testsSection.substring(start, end);
+
+
+            if (testsContent.contains("```java") && testsContent.contains("```")) {
+                return testsContent.split("```java")[1].split("```")[0].trim();
+            } else {
+                return "";
+            }
         } catch (Exception e) {
             log.error("Error while extracting tests: ", e);
             return "";
@@ -97,9 +154,14 @@ public class TestExecutionListener {
 
     private String extractLanguage(String analysisDetails) {
         try {
-            int startIdx = analysisDetails.indexOf("\"language\" : \"") + "\"language\" : \"".length();
-            int endIdx = analysisDetails.indexOf("\"", startIdx);
-            return analysisDetails.substring(startIdx, endIdx).trim();
+            if (analysisDetails.contains("\"language\" : \"")) {
+                int startIdx = analysisDetails.indexOf("\"language\" : \"") + "\"language\" : \"".length();
+                int endIdx = analysisDetails.indexOf("\"", startIdx);
+                return analysisDetails.substring(startIdx, endIdx).trim();
+            } else {
+                return "Unknown";
+            }
+
         } catch (Exception e) {
             log.error("Error extracting language: ", e);
             return "Unknown";
@@ -110,29 +172,29 @@ public class TestExecutionListener {
         Path tempDir = Files.createTempDirectory("test-execution");
         log.info("Temporary directory created: {}", tempDir.toString());
 
-        // Parse the package path and name from the code
+
         String packagePath = extractPackagePath(code);
         String packageName = packagePath.replace("/", ".");
 
-        // Use a fallback package if no package is declared
+
         boolean isDefaultPackage = packageName.equals("default");
         if (isDefaultPackage) {
             packageName = "com.testexecution.generated";
             packagePath = packageName.replace(".", "/");
         }
 
-        // Base paths for source and test directories
+
         File sourceBase = new File(tempDir.toFile(), "src/main/java/" + packagePath);
         File testBase = new File(tempDir.toFile(), "src/test/java/" + packagePath);
 
-        // Create directories
+
         sourceBase.mkdirs();
         testBase.mkdirs();
 
-        // Save the main code file
+
         File codeFile = new File(sourceBase, filename);
         try (FileWriter writer = new FileWriter(codeFile)) {
-            // Check if a package declaration exists in the code
+
             boolean hasPackageDeclaration = code.lines().anyMatch(line -> line.startsWith("package "));
             if (!hasPackageDeclaration) {
                 writer.write("package " + packageName + ";\n\n");
@@ -141,15 +203,15 @@ public class TestExecutionListener {
         }
         log.info("Code file saved: {}", codeFile.getAbsolutePath());
 
-        // Extract the main class name
+
         String mainClassName = filename.replace(".java", "");
 
-        // Save the test file
+
         String testFileName = filename.replaceAll(".java$", "Test.java");
         File testsFile = new File(testBase, testFileName);
 
         try (FileWriter writer = new FileWriter(testsFile)) {
-            // Add package declaration to the test file
+
             writer.write("package " + packageName + ";\n\n");
             writer.write("import " + packageName + "." + mainClassName + ";\n\n");
             writer.write(tests);
@@ -161,9 +223,9 @@ public class TestExecutionListener {
 
     private String extractPackagePath(String code) {
         return code.lines()
-            .filter(line -> line.startsWith("package "))
-            .findFirst()
-            .map(line -> line.replace("package ", "").replace(";", "").trim().replace(".", "/"))
-            .orElse("default");
+                .filter(line -> line.startsWith("package "))
+                .findFirst()
+                .map(line -> line.replace("package ", "").replace(";", "").trim().replace(".", "/"))
+                .orElse("default");
     }
 }
