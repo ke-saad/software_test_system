@@ -2,10 +2,91 @@
 # Ignore IDE-specific files
 .idea/
 .vscode/
-code_analyse/
-# Ignore generated files
-*.ir
-*.metadata
-.scannerwork/
-target/
 
+
+*.sublime-workspace
+*.sublime-project
+
+# Ignore OS-specific files
+*.class
+*.DS_Store
+*.desktop
+*.directory
+
+# Ignore Angular build files
+frontend/dist/
+frontend/node_modules/
+frontend/.angular/
+frontend/.cache/
+frontend/.npm/
+
+# Ignore Spring Boot build files
+**/target/
+**/out/
+**/build/
+**/.mvn/
+
+# Ignore Maven or Gradle files
+.mvn/
+.gradle/
+**/*.jar
+**/*.war
+**/*.ear
+
+# Ignore IDE settings (Eclipse, IntelliJ, etc.)
+/.classpath
+*.project
+*.settings/
+*.idea/
+*.vscode/
+
+# Ignore security files or secrets
+*.key
+*.pem
+*.crt
+*.pfx
+*.env
+
+# Scanner tool reports
+.scannerwork/
+*.metadata
+
+# Ignore test result files
+**/test-results/
+**/surefire-reports/
+
+# Documentation and temporary files
+documentation/temp/
+documentation/drafts/
+documentation/*.tmp
+documentation/*.bak
+
+# Exclude user-generated files
+*.log
+*.tmp
+*.pid
+*.seed
+*.pid.lock
+
+# Exclude unnecessary files
+**/.settings/
+**/.cache/
+*.session
+**/*.sql
+*.sqlbackup
+
+# Specific Folders (Add more as necessary)
+results-recommendations-service/target/
+test-execution-service/target/
+test-generation-service/target/
+code-analysis-service/target/
+auth-service/target/
+/code_analyse/
+# Ignore generated configuration files
+*.properties
+*.xml
+*.config
+*.yml
+*.json
+*.yaml
+folders.txt
